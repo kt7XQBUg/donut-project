@@ -62,16 +62,18 @@
        <div class="bg-black border border-zinc-800 rounded-lg p-8 backdrop-blur-sm">
         <i data-lucide="plus-circle" class="w-12 h-12 text-green-500 mx-auto mb-4"></i>
         <h3 class="text-lg font-bold text-white mb-4">สร้าง SESSION ใหม่</h3>
-        <button onclick="createNewSession()" class="w-full btn-investigate px-6 py-3 rounded font-bold uppercase tracking-wider">
-          <i data-lucide="radio" class="w-5 h-5 inline mr-2"></i> สร้าง SESSION
+        <p class="text-xs text-zinc-500 mb-3">ต้องการ Firebase</p>
+        <button onclick="createNewSession()" class="w-full btn-investigate px-6 py-3 rounded font-bold uppercase tracking-wider opacity-50 cursor-not-allowed" disabled>
+          <i data-lucide="radio" class="w-5 h-5 inline mr-2"></i> ไม่พร้อม
         </button>
        </div>
        
        <div class="bg-black border border-zinc-800 rounded-lg p-8 backdrop-blur-sm">
         <i data-lucide="share-2" class="w-12 h-12 text-blue-500 mx-auto mb-4"></i>
         <h3 class="text-lg font-bold text-white mb-4">เข้าร่วม SESSION</h3>
-        <button onclick="showJoinOptions()" class="w-full btn-investigate px-6 py-3 rounded font-bold uppercase tracking-wider">
-          <i data-lucide="log-in" class="w-5 h-5 inline mr-2"></i> เข้าร่วม
+        <p class="text-xs text-zinc-500 mb-3">ต้องการ Firebase</p>
+        <button onclick="showJoinOptions()" class="w-full btn-investigate px-6 py-3 rounded font-bold uppercase tracking-wider opacity-50 cursor-not-allowed" disabled>
+          <i data-lucide="log-in" class="w-5 h-5 inline mr-2"></i> ไม่พร้อม
         </button>
        </div>
      </div>
@@ -368,12 +370,21 @@
     ];
 
     let currentUrlIndex = 0;
+    let firebaseAttempts = 0;
+    const maxFirebaseAttempts = 3;
 
     // Dynamically load Firebase SDK from multiple sources
     function loadFirebaseSDK() {
       if (currentUrlIndex >= firebaseSDKUrls.length) {
-        console.error('✗ All Firebase SDK CDN sources failed to load');
-        setTimeout(loadFirebaseSDK, 5000);
+        firebaseAttempts++;
+        if (firebaseAttempts <= maxFirebaseAttempts) {
+          console.warn(`✗ All Firebase SDK CDN sources failed (attempt ${firebaseAttempts}/${maxFirebaseAttempts})`);
+          currentUrlIndex = 0;
+          setTimeout(loadFirebaseSDK, 3000);
+          return;
+        }
+        console.error('✗✗✗ Firebase SDK permanently unavailable - using local mode only');
+        firebaseReady = false;
         return;
       }
 
@@ -382,6 +393,7 @@
       
       const script = document.createElement('script');
       script.src = url;
+      script.timeout = 5000;
       script.onload = function() {
         console.log('✓ Firebase SDK script loaded');
         firebaseSDKLoaded = true;
@@ -391,7 +403,7 @@
       script.onerror = function() {
         console.warn(`✗ Firebase SDK failed from ${url}`);
         currentUrlIndex++;
-        setTimeout(loadFirebaseSDK, 1000);
+        setTimeout(loadFirebaseSDK, 500);
       };
       document.head.appendChild(script);
     }
@@ -434,8 +446,8 @@
         
         console.log('Waiting for Firebase to be ready...');
         
-        // Wait for Firebase to be ready
-        const maxAttempts = 100;
+        // Wait for Firebase to be ready - but don't wait forever
+        const maxAttempts = 30;
         let attempts = 0;
         const checkInterval = setInterval(() => {
           attempts++;
@@ -445,8 +457,8 @@
             resolve();
           } else if (attempts >= maxAttempts) {
             clearInterval(checkInterval);
-            console.error('✗ Firebase failed to initialize after 10 seconds');
-            resolve(); // Resolve anyway to avoid hanging
+            console.warn('⚠️  Firebase unavailable - using local session mode');
+            resolve(); // Resolve anyway to allow local fallback
           }
         }, 100);
       });
@@ -486,6 +498,11 @@
     }
 
     function createNewSession() {
+      if (!firebaseReady || !database) {
+        alert('Network mode is not available. Please use Local Multiplayer instead.');
+        return;
+      }
+      
       // Show loading and wait for Firebase
       document.getElementById('sessionSetupScreen').classList.add('hidden');
       const loadingMsg = document.createElement('div');
@@ -494,7 +511,7 @@
       
       ensureFirebaseReady().then(() => {
         if (!database) {
-          alert('Firebase connection failed. Please reload the page.');
+          alert('Firebase connection failed. Please use Local Multiplayer instead.');
           loadingMsg.remove();
           document.getElementById('sessionSetupScreen').classList.remove('hidden');
           return;
@@ -610,6 +627,11 @@
     }
 
     function joinSession() {
+      if (!firebaseReady || !database) {
+        alert('Network mode is not available. Please use Local Multiplayer instead.');
+        return;
+      }
+      
       // Show loading and wait for Firebase
       document.getElementById('sessionIdInputScreen').classList.add('hidden');
       const loadingMsg = document.createElement('div');
@@ -618,7 +640,7 @@
       
       ensureFirebaseReady().then(() => {
         if (!database) {
-          alert('Firebase connection failed. Please reload the page.');
+          alert('Firebase connection failed. Please use Local Multiplayer instead.');
           loadingMsg.remove();
           document.getElementById('sessionIdInputScreen').classList.remove('hidden');
           return;
