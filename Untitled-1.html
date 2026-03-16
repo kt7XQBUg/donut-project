@@ -345,6 +345,10 @@
 
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-compat.min.js"></script>
   <script>
+    // Global Firebase variables - MUST be accessible to all scripts
+    let database;
+    let firebaseReady = false;
+
     // Initialize Firebase when SDK loads
     const firebaseConfig = {
       apiKey: "AIzaSyB635g3rHfk1kkejVsXNcxJC1lSUGyCgMo",
@@ -356,8 +360,11 @@
       appId: "1:995860841352:web:b62f91fab3621aa4f8f03d"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    database = firebase.database();
+    firebaseReady = true;
   </script>
 
   <script>
@@ -393,6 +400,11 @@
     }
 
     function createNewSession() {
+      if (!firebaseReady || !database) {
+        alert('Firebase is loading... Please wait a moment and try again.');
+        return;
+      }
+      
       const sessionId = generateSessionId();
       gameState.sessionId = sessionId;
       gameState.isNetworkGame = true;
@@ -497,6 +509,11 @@
     }
 
     function joinSession() {
+      if (!firebaseReady || !database) {
+        alert('Firebase is loading... Please wait a moment and try again.');
+        return;
+      }
+      
       const sessionId = document.getElementById('sessionIdInput').value.trim().toUpperCase();
       const playerName = document.getElementById('playerNameInput').value.trim();
       
