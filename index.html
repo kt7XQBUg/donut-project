@@ -1,0 +1,1031 @@
+<!doctype html>
+<html lang="th" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CASE X - แฟ้มคดีลับ (V3: 9 SECTORS & RANKS)</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-compat.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --crime-yellow: #eab308; --blood-red: #dc2626; --noir-dark: #050505; --cyber-green: #22c55e; }
+    * { font-family: 'Kanit', sans-serif; }
+    .font-typewriter { font-family: 'Courier Prime', monospace; }
+    body { background-color: var(--noir-dark); color: #e4e4e7; background-image: linear-gradient(rgba(20, 20, 20, 0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(20, 20, 20, 0.9) 1px, transparent 1px); background-size: 30px 30px; }
+    
+    .crime-tape { background: repeating-linear-gradient(45deg, #eab308, #eab308 15px, #000000 15px, #000000 30px); height: 6px; width: 100%; box-shadow: 0 2px 10px rgba(234, 179, 8, 0.3); }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 15px rgba(220, 38, 38, 0.2); } 50% { box-shadow: 0 0 35px rgba(220, 38, 38, 0.6); } }
+    @keyframes stamp { 0% { opacity: 0; transform: scale(3) rotate(-20deg); } 50% { opacity: 1; transform: scale(0.8) rotate(-20deg); } 100% { opacity: 1; transform: scale(1) rotate(-20deg); } }
+    @keyframes shake { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+    
+    .animate-stamp { animation: stamp 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+    .animate-pulse-glow { animation: pulse-glow 1.5s ease-in-out infinite; }
+    .animate-shake { animation: shake 0.4s ease-in-out; }
+    
+    .folder-card { background: #121212; border: 1px solid #3f3f46; border-top: 4px solid var(--blood-red); transition: all 0.3s ease; position: relative; }
+    .folder-card::before { content: ''; position: absolute; top: -12px; left: 10px; width: 40px; height: 10px; background: var(--blood-red); border-radius: 4px 4px 0 0; }
+    .folder-card:hover { transform: translateY(-5px); border-color: var(--blood-red); box-shadow: 0 10px 30px rgba(220, 38, 38, 0.2); }
+    
+    .btn-investigate { background: var(--blood-red); color: #fff; border: 2px solid #7f1d1d; box-shadow: 4px 4px 0px #450a0a; transition: all 0.1s ease; }
+    .btn-investigate:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #450a0a; background: #ef4444; }
+    .btn-investigate:active { transform: translate(2px, 2px); box-shadow: 0px 0px 0px #450a0a; }
+    
+    .location-card { background: rgba(18, 18, 18, 0.9); border: 1px dashed #52525b; transition: all 0.3s ease; }
+    .location-card:hover { border-color: var(--crime-yellow); background: rgba(30, 30, 30, 0.9); }
+    .location-card.visited { border-style: solid; border-color: #27272a; opacity: 0.4; filter: grayscale(100%); }
+
+    .code-digit { background: #000; border: 2px solid #3f3f46; color: #3f3f46; }
+    .code-digit.revealed { border-color: var(--cyber-green); color: var(--cyber-green); text-shadow: 0 0 12px rgba(34, 197, 94, 0.6); }
+
+    .top-secret { color: var(--blood-red); border: 3px solid var(--blood-red); padding: 6px 12px; font-weight: 800; display: inline-block; border-radius: 4px; letter-spacing: 3px; text-transform: uppercase; box-shadow: 0 0 10px rgba(220,38,38,0.3); }
+
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #050505; border-radius: 4px;}
+    ::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 4px;}
+    ::-webkit-scrollbar-thumb:hover { background: #ef4444; }
+  </style>
+ </head>
+ <body class="h-full overflow-hidden">
+  <div id="app" class="h-full w-full overflow-auto">
+   
+   <div id="sessionSetupScreen" class="min-h-full flex flex-col items-center justify-center p-6 relative">
+    <div class="text-center max-w-3xl">
+     <div class="mb-6 flex justify-center">
+      <i data-lucide="network" class="w-20 h-20 text-cyan-500 animate-[spin_10s_linear_infinite]"></i>
+     </div>
+     <h1 class="text-5xl font-bold mb-2 font-typewriter text-white tracking-widest drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">NETWORK MODE</h1>
+     <p class="text-lg text-red-500 mb-8 font-typewriter font-bold tracking-widest">เชื่อมต่อผู้เล่นผ่าน QR CODE หรือ SESSION ID</p>
+     
+     <div class="grid grid-cols-2 gap-6 mb-8">
+       <div class="bg-black border border-zinc-800 rounded-lg p-8 backdrop-blur-sm">
+        <i data-lucide="plus-circle" class="w-12 h-12 text-green-500 mx-auto mb-4"></i>
+        <h3 class="text-lg font-bold text-white mb-4">สร้าง SESSION ใหม่</h3>
+        <button onclick="createNewSession()" class="w-full btn-investigate px-6 py-3 rounded font-bold uppercase tracking-wider">
+          <i data-lucide="radio" class="w-5 h-5 inline mr-2"></i> สร้าง SESSION
+        </button>
+       </div>
+       
+       <div class="bg-black border border-zinc-800 rounded-lg p-8 backdrop-blur-sm">
+        <i data-lucide="share-2" class="w-12 h-12 text-blue-500 mx-auto mb-4"></i>
+        <h3 class="text-lg font-bold text-white mb-4">เข้าร่วม SESSION</h3>
+        <button onclick="showJoinOptions()" class="w-full btn-investigate px-6 py-3 rounded font-bold uppercase tracking-wider">
+          <i data-lucide="log-in" class="w-5 h-5 inline mr-2"></i> เข้าร่วม
+        </button>
+       </div>
+     </div>
+     
+     <button onclick="startLocalGame()" class="btn-investigate px-8 py-3 rounded font-bold text-lg inline-block uppercase tracking-wider">
+       <i data-lucide="play" class="w-5 h-5 inline mr-2"></i> เล่นท้องถิ่น (ไม่มีเน็ตเวิร์ก)
+     </button>
+    </div>
+   </div>
+
+   <div id="sessionCreateScreen" class="min-h-full flex flex-col items-center justify-center p-6 relative hidden">
+    <div class="text-center max-w-2xl">
+     <button onclick="backToSessionSetup()" class="absolute top-6 left-6 text-zinc-400 hover:text-white transition"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+     
+     <h2 class="text-4xl font-bold mb-2 font-typewriter text-white tracking-widest">SESSION ID</h2>
+     <p class="text-zinc-400 mb-8">แชร์กับผู้เล่นคนอื่น</p>
+     
+     <div class="bg-black border-2 border-green-500 rounded-lg p-8 mb-8">
+      <div class="bg-white p-4 rounded inline-block mb-6">
+        <div id="qrCodeContainer" class="w-64 h-64"></div>
+      </div>
+      
+      <div class="bg-zinc-900 border border-zinc-800 rounded-lg p-6 mb-6">
+        <p class="text-xs text-zinc-500 mb-2 tracking-widest">SESSION ID</p>
+        <p id="sessionIdDisplay" class="text-3xl font-bold text-green-500 font-typewriter break-all mb-4"></p>
+        <button onclick="copySessionId()" class="bg-zoom-600 hover:bg-blue-500 text-white px-6 py-2 rounded font-bold transition inline-flex items-center gap-2">
+          <i data-lucide="copy" class="w-4 h-4"></i> คัดลอก
+        </button>
+      </div>
+      
+      <div id="playersWaitingList" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 text-left min-h-[200px]">
+        <h3 class="text-white font-bold mb-4 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5"></i> ผู้เล่นที่เข้าร่วม</h3>
+        <div id="waitingPlayersContainer" class="space-y-2"></div>
+        <button id="startSessionBtn" onclick="startSessionGame()" class="w-full mt-6 bg-green-700 hover:bg-green-600 text-white py-3 rounded font-bold uppercase transition hidden">
+          <i data-lucide="play" class="w-5 h-5 inline mr-2"></i> เริ่มเกม
+        </button>
+      </div>
+     </div>
+    </div>
+   </div>
+
+   <div id="sessionJoinScreen" class="min-h-full flex flex-col items-center justify-center p-6 relative hidden">
+    <div class="text-center max-w-2xl">
+     <button onclick="backToSessionSetup()" class="absolute top-6 left-6 text-zinc-400 hover:text-white transition"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+     
+     <h2 class="text-4xl font-bold mb-8 font-typewriter text-white tracking-widest">เข้าร่วม SESSION</h2>
+     
+     <div class="grid grid-cols-2 gap-6 mb-8">
+      <button onclick="showSessionIdInput()" class="bg-black border border-zinc-800 rounded-lg p-6 hover:border-blue-600 transition">
+        <i data-lucide="type" class="w-12 h-12 text-blue-500 mx-auto mb-4"></i>
+        <h3 class="text-white font-bold">ใส่ SESSION ID</h3>
+      </button>
+      
+      <button onclick="alert('ฟีเจอร์กล้องจะใช้งานได้เร็ว ๆ นี้')" class="bg-black border border-zinc-800 rounded-lg p-6 hover:border-purple-600 transition">
+        <i data-lucide="camera" class="w-12 h-12 text-purple-500 mx-auto mb-4"></i>
+        <h3 class="text-white font-bold">สแกน QR CODE</h3>
+      </button>
+     </div>
+    </div>
+   </div>
+
+   <div id="sessionIdInputScreen" class="min-h-full flex flex-col items-center justify-center p-6 relative hidden">
+    <div class="text-center max-w-2xl">
+     <button onclick="backToSessionJoin()" class="absolute top-6 left-6 text-zinc-400 hover:text-white transition"><i data-lucide="arrow-left" class="w-6 h-6"></i></button>
+     
+     <h2 class="text-3xl font-bold mb-8 font-typewriter text-white tracking-widest">ใส่ SESSION ID</h2>
+     
+     <div class="bg-black border border-zinc-800 rounded-lg p-8 mb-6">
+      <input type="text" id="sessionIdInput" class="w-full bg-zinc-900 border-2 border-zinc-800 rounded px-4 py-4 text-center text-2xl text-white mb-6 outline-none focus:border-blue-600 transition font-typewriter placeholder-zinc-600" placeholder="อ.ต.ม. SESSION ID">
+      
+      <input type="text" id="playerNameInput" class="w-full bg-zinc-900 border-2 border-zinc-800 rounded px-4 py-4 text-lg text-white mb-6 outline-none focus:border-blue-600 transition font-typewriter placeholder-zinc-600" placeholder="ชื่อของคุณ">
+      
+      <button onclick="joinSession()" class="w-full bg-blue-700 hover:bg-blue-600 text-white py-4 rounded font-bold text-lg uppercase transition mb-3">
+        <i data-lucide="log-in" class="w-5 h-5 inline mr-2"></i> เข้าร่วม
+      </button>
+      
+      <button onclick="backToSessionJoin()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 py-3 rounded font-bold uppercase transition">
+        ยกเลิก
+      </button>
+     </div>
+    </div>
+   </div>
+   
+   <div id="playerSetupScreen" class="min-h-full flex flex-col items-center justify-center p-6 relative hidden">
+    <div class="text-center max-w-2xl">
+     <div class="mb-6 flex justify-center">
+      <i data-lucide="users" class="w-20 h-20 text-yellow-500 animate-[spin_10s_linear_infinite]"></i>
+     </div>
+     <h1 class="text-5xl font-bold mb-2 font-typewriter text-white tracking-widest drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">MULTIPLAYER MODE</h1>
+     <p class="text-lg text-red-500 mb-8 font-typewriter font-bold tracking-widest">เลือกจำนวนผู้เล่น</p>
+     
+     <div class="grid grid-cols-4 gap-4 mb-8">
+       <button onclick="setupGame(1)" class="btn-investigate px-6 py-4 rounded font-bold text-xl inline-block uppercase tracking-wider">
+         <i data-lucide="user" class="w-6 h-6 inline mb-1"></i> 1 Player
+       </button>
+       <button onclick="setupGame(2)" class="btn-investigate px-6 py-4 rounded font-bold text-xl inline-block uppercase tracking-wider">
+         <i data-lucide="users" class="w-6 h-6 inline mb-1"></i> 2 Players
+       </button>
+       <button onclick="setupGame(3)" class="btn-investigate px-6 py-4 rounded font-bold text-xl inline-block uppercase tracking-wider">
+         <i data-lucide="users" class="w-6 h-6 inline mb-1"></i> 3 Players
+       </button>
+       <button onclick="setupGame(4)" class="btn-investigate px-6 py-4 rounded font-bold text-xl inline-block uppercase tracking-wider">
+         <i data-lucide="users" class="w-6 h-6 inline mb-1"></i> 4 Players
+       </button>
+     </div>
+    </div>
+   </div>
+
+   <div id="startScreen" class="min-h-full flex flex-col items-center justify-center p-6 relative">
+    <div class="absolute top-6 right-6 bg-zinc-900/80 border border-zinc-800 rounded p-4 backdrop-blur-sm shadow-2xl">
+      <h3 class="text-xs text-zinc-500 font-typewriter mb-2 tracking-widest border-b border-zinc-800 pb-2"><i data-lucide="award" class="w-4 h-4 inline mb-0.5 text-yellow-500"></i> CAREER STATS</h3>
+      <div class="grid grid-cols-2 gap-4 text-center mt-2">
+        <div>
+          <p class="text-[10px] text-zinc-400">CASES SOLVED</p>
+          <p id="statSolved" class="text-xl font-bold text-white font-typewriter">0</p>
+        </div>
+        <div>
+          <p class="text-[10px] text-zinc-400">RANK S (PERFECT)</p>
+          <p id="statRankS" class="text-xl font-bold text-yellow-500 font-typewriter drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]">0</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center max-w-2xl relative">
+     <div class="absolute -top-16 -left-12 opacity-10"><i data-lucide="skull" class="w-40 h-40"></i></div>
+     <div class="mb-6 flex justify-center">
+      <i data-lucide="crosshairs" class="w-20 h-20 text-red-500 animate-[spin_10s_linear_infinite]"></i>
+     </div>
+     <h1 id="gameTitle" class="text-7xl font-bold mb-2 font-typewriter text-white tracking-widest drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">CASE X</h1>
+     <p class="text-xl text-red-500 mb-8 font-typewriter font-bold tracking-widest">OPERATION: BEYOND LOGIC</p>
+     
+     <div class="bg-black/80 border border-zinc-800 rounded-lg p-8 mb-8 text-left shadow-2xl relative overflow-hidden backdrop-blur-sm">
+      <div class="crime-tape absolute top-0 left-0"></div>
+      <h3 class="text-red-500 font-bold mb-4 flex items-center gap-2 text-xl tracking-wide">
+        <i data-lucide="shield-alert" class="w-6 h-6"></i> กฎการสืบสวน
+      </h3>
+      <ul class="space-y-4 text-sm text-zinc-300 font-typewriter bg-zinc-900/50 p-4 rounded border border-zinc-800">
+        <li class="flex gap-3"><i data-lucide="brain-circuit" class="w-5 h-5 text-yellow-500 shrink-0 mt-0.5"></i> คุณต้องไขปริศนาคณิตศาสตร์เพื่อปลดล็อกหลักฐาน (สุ่มโจทย์ 10,000+ รูปแบบ)</li>
+        <li class="flex gap-3"><i data-lucide="calendar-clock" class="w-5 h-5 text-red-500 shrink-0 mt-0.5"></i> <span class="text-white">มีเวลาสืบสวนคดี 15 วัน</span> การลงพื้นที่แต่ละจุดใช้เวลา 1 วัน</li>
+        <li class="flex gap-3"><i data-lucide="skull" class="w-5 h-5 text-red-600 shrink-0 mt-0.5"></i> <span class="text-red-400 font-bold">ตอบผิดถูกตีรวน เสียเวลาสืบสวน -3 วัน!</span> </li>
+        <li class="flex gap-3"><i data-lucide="star" class="w-5 h-5 text-yellow-400 shrink-0 mt-0.5"></i> <b>การประเมินผล:</b> จบคดีไวได้ Rank สูง (S, A, B, C) เวลาที่เหลือมีผลต่อเกรดของคุณ!</li>
+      </ul>
+     </div>
+     
+     <button onclick="showPlayerSetup()" class="btn-investigate px-14 py-4 rounded font-bold text-xl animate-pulse-glow flex items-center gap-3 mx-auto uppercase tracking-wider">
+       <i data-lucide="power" class="w-6 h-6"></i> เข้าสู่ระบบสืบสวน
+     </button>
+    </div>
+   </div>
+
+   <div id="mapSelectScreen" class="min-h-full p-6 hidden">
+    <div class="max-w-6xl mx-auto mt-8">
+     <div class="flex items-center gap-4 mb-8 border-b border-zinc-800 pb-4">
+       <i data-lucide="server" class="w-10 h-10 text-red-500"></i>
+       <div>
+         <h2 class="text-3xl font-bold text-white uppercase tracking-wider">เลือกเขตพื้นที่เกิดเหตุ</h2>
+         <p class="text-zinc-500 font-typewriter text-sm mt-1">AVAILABLE SECTORS: 09 ZONES</p>
+       </div>
+     </div>
+     <div id="mapsGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
+       </div>
+    </div>
+   </div>
+
+   <div id="caseScreen" class="min-h-full flex items-center justify-center p-6 hidden relative">
+     <div class="max-w-xl w-full bg-zinc-100 rounded text-zinc-900 p-8 relative transform -rotate-1">
+      <div class="absolute -top-4 -right-4 top-secret animate-stamp transform rotate-12 bg-white/95">TOP SECRET</div>
+      <div class="flex justify-between items-center mb-6 border-b-2 border-red-900 pb-4">
+        <div><h2 class="text-3xl font-black font-typewriter tracking-tight">MISSION BRIEFING</h2></div>
+      </div>
+      <div class="mb-8">
+       <p id="caseDescription" class="text-xl font-typewriter leading-relaxed font-bold bg-zinc-200 p-4 rounded border-l-4 border-red-600"></p>
+      </div>
+      <button onclick="startInvestigation()" class="w-full bg-red-600 text-white py-4 rounded font-bold hover:bg-red-700 transition flex justify-center items-center gap-2 text-lg uppercase shadow-lg">
+        <i data-lucide="crosshair" class="w-5 h-5"></i> รับทราบภารกิจ (Start Timer)
+      </button>
+     </div>
+   </div>
+
+   <div id="gameScreen" class="min-h-full p-4 hidden">
+    <div class="max-w-6xl mx-auto mt-6">
+     <div class="bg-black border border-zinc-800/50 rounded-lg p-5 mb-6 shadow-2xl flex flex-wrap items-center justify-between gap-6">
+       <div class="flex items-center gap-4">
+        <div class="bg-zinc-900 p-3 rounded border border-zinc-800 text-red-500"><i data-lucide="cpu" class="w-6 h-6"></i></div>
+        <div>
+         <h2 id="currentMapName" class="text-xl font-black text-white tracking-widest uppercase"></h2>
+         <p id="currentCase" class="text-xs text-red-500 font-typewriter font-bold"></p>
+         <p id="sessionDisplayInfo" class="text-xs text-cyan-500 font-typewriter"></p>
+        </div>
+       </div>
+       <div id="playerIndicator" class="bg-blue-900/50 border border-blue-600 text-blue-400 px-4 py-2 rounded font-bold tracking-wider hidden"></div>
+       <div class="flex items-center gap-3 bg-zinc-950 px-5 py-3 rounded border border-zinc-800">
+        <span class="text-zinc-500 text-xs font-typewriter">DECRYPTED CODE:</span>
+        <div class="flex gap-2">
+         <div id="code0" class="code-digit w-10 h-10 rounded flex items-center justify-center font-typewriter text-xl font-bold">?</div>
+         <div id="code1" class="code-digit w-10 h-10 rounded flex items-center justify-center font-typewriter text-xl font-bold">?</div>
+         <div id="code2" class="code-digit w-10 h-10 rounded flex items-center justify-center font-typewriter text-xl font-bold">?</div>
+         <div id="code3" class="code-digit w-10 h-10 rounded flex items-center justify-center font-typewriter text-xl font-bold">?</div>
+        </div>
+       </div>
+       <div class="flex items-center gap-6">
+        <div class="text-right bg-zinc-900/80 px-4 py-2 rounded border border-zinc-800">
+         <p class="text-[10px] text-zinc-500 font-typewriter tracking-widest">DAYS REMAINING</p>
+         <p id="timeLeftDisplay" class="text-3xl font-black text-yellow-500 font-typewriter drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]">15d</p>
+        </div>
+        <button onclick="showSuspects()" class="bg-red-600 hover:bg-red-500 border border-red-400 text-white px-6 py-3 rounded text-sm font-bold transition flex items-center gap-2 uppercase shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+          <i data-lucide="scan-face" class="w-5 h-5"></i> ระบุตัวผู้ต้องสงสัย
+        </button>
+        <button id="playersScoreboard" onclick="showPlayerScoreboard()" class="bg-purple-600 hover:bg-purple-500 border border-purple-400 text-white px-6 py-3 rounded text-sm font-bold transition flex items-center gap-2 uppercase shadow-[0_0_15px_rgba(220,38,38,0.3)] hidden">
+          <i data-lucide="trophy" class="w-5 h-5"></i> คะแนน
+        </button>
+       </div>
+     </div>
+     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-2">
+       <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-6 min-h-[500px]">
+        <div id="locationsGrid" class="grid grid-cols-2 gap-4"></div>
+       </div>
+      </div>
+      <div class="lg:col-span-1">
+       <div class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-5 h-full flex flex-col">
+        <div id="logContainer" class="space-y-3 overflow-y-auto flex-1 pr-2 font-typewriter text-sm"></div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+
+   <div id="suspectsModal" class="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-black rounded-lg max-w-5xl w-full max-h-[90vh] overflow-y-auto border border-zinc-800 shadow-[0_0_50px_rgba(220,38,38,0.1)] relative">
+     <div class="sticky top-0 z-20 bg-black/95 border-b border-zinc-800 px-6 py-4 mb-6 backdrop-blur-xl">
+       <div class="flex items-center justify-between">
+        <h3 class="text-3xl font-black text-white flex items-center gap-3 tracking-widest uppercase">
+          <i data-lucide="database" class="w-8 h-8 text-red-600"></i> SUSPECTS
+        </h3>
+        <button onclick="closeSuspectsModal()" class="text-zinc-500 hover:text-white transition bg-zinc-900 p-2 rounded border border-zinc-800"> 
+          <i data-lucide="x" class="w-5 h-5"></i> 
+        </button>
+       </div>
+       <div id="codeStatus" class="mt-4 bg-zinc-900/80 border border-zinc-700 rounded p-4 text-center"></div>
+     </div>
+     <div class="px-6 pb-6">
+       <div id="suspectsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+       <div id="accuseSection" class="mt-8 text-center hidden">
+        <p class="text-red-500 font-bold mb-2 animate-pulse bg-red-900/20 inline-block px-4 py-2 rounded border border-red-900/50"><i data-lucide="alert-octagon" class="w-5 h-5 inline mb-1"></i> คำเตือน: ยื่นขอหมายจับได้ครั้งเดียวเท่านั้น!</p>
+       </div>
+     </div>
+    </div>
+   </div>
+
+   <div id="puzzleModal" class="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+     <div class="bg-black rounded-lg p-8 max-w-lg w-full border-t-4 border-red-600">
+       <p id="puzzleQuestion" class="text-xl text-white font-typewriter mb-6 whitespace-pre-line"></p>
+       <div id="hintSection" class="mb-6 text-center">
+         <button id="showHintBtn" onclick="useHint()" class="bg-zinc-900 text-zinc-400 px-4 py-2 rounded border border-zinc-700 hover:text-white transition"> ส่งหลักฐานวิเคราะห์ (-2 วัน) </button>
+         <div id="puzzleHintContainer" class="hidden"><p id="puzzleHint" class="text-sm text-green-400"></p></div>
+       </div>
+       <input type="number" id="puzzleAnswer" class="w-full bg-black border-2 border-zinc-800 rounded px-4 py-4 text-center text-3xl text-white mb-4 outline-none focus:border-red-600 transition" placeholder="ENTER NUMBER">
+       <div class="flex gap-3">
+        <button onclick="closePuzzleModal()" class="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 py-3 rounded transition"> ถอนตัว </button> 
+        <button onclick="submitAnswer()" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-3 rounded font-bold transition"> ยืนยันรหัส </button>
+       </div>
+     </div>
+   </div>
+
+   <div id="resultModal" class="fixed inset-0 bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
+    <div id="resultContent" class="text-center max-w-2xl w-full bg-black p-10 rounded-lg border border-zinc-800 relative shadow-2xl my-8"></div>
+   </div>
+
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-compat.min.js"></script>
+  <script>
+    // Initialize Firebase when SDK loads
+    const firebaseConfig = {
+      apiKey: "AIzaSyB635g3rHfk1kkejVsXNcxJC1lSUGyCgMo",
+      authDomain: "case-x-multiplayer.firebaseapp.com",
+      databaseURL: "https://case-x-multiplayer-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "case-x-multiplayer",
+      storageBucket: "case-x-multiplayer.firebasestorage.app",
+      messagingSenderId: "995860841352",
+      appId: "1:995860841352:web:b62f91fab3621aa4f8f03d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+  </script>
+
+  <script>
+    const MAPS = [
+      { name: 'องค์กรเงามืด', theme: 'SHADOW SYNDICATE', mapCode: 'SECTOR-01', mainIcon: 'building-2', locations: [ { name: 'ศูนย์ข้อมูล', icon: 'server', visited: false }, { name: 'ห้องผู้บริหาร', icon: 'briefcase', visited: false }, { name: 'ลานจอดรถ', icon: 'car', visited: false }, { name: 'ช่องระบายอากาศ', icon: 'fan', visited: false } ], events: [ { title: 'เซิร์ฟเวอร์ถูกปิดกั้น', desc: 'ต้องประสานงานเจาะระบบใหม่', timeChange: -2, icon: 'shield-alert' } ] },
+      { name: 'ศูนย์วิจัยอาวุธ', theme: 'BIO-WEAPON LAB', mapCode: 'SECTOR-02', mainIcon: 'microscope', locations: [ { name: 'ห้องผสมสารเคมี', icon: 'flask-conical', visited: false }, { name: 'โซนกักกัน', icon: 'biohazard', visited: false }, { name: 'ตู้แช่แข็ง', icon: 'snowflake', visited: false }, { name: 'ห้องทำลายเอกสาร', icon: 'flame', visited: false } ], events: [ { title: 'ศาลอนุมัติหมายค้น', desc: 'เข้าถึงพื้นที่รวดเร็วขึ้น', timeChange: +1, icon: 'key' } ] },
+      { name: 'คลังสมบัติใต้ดิน', theme: 'THE GRAND VAULT', mapCode: 'SECTOR-03', mainIcon: 'banknote', locations: [ { name: 'ประตูเซฟ', icon: 'lock', visited: false }, { name: 'เลเซอร์ตรวจจับ', icon: 'activity', visited: false }, { name: 'คลังศิลปะ', icon: 'image', visited: false }, { name: 'ห้องควบคุม', icon: 'cpu', visited: false } ], events: [ { title: 'สื่อมวลชนรบกวน', desc: 'เสียเวลาจัดการข่าวลือ', timeChange: -1, icon: 'cctv' } ] },
+      { name: 'คาสิโนลอยฟ้า', theme: 'HIGH ROLLER CASINO', mapCode: 'SECTOR-04', mainIcon: 'gem', locations: [ { name: 'โต๊ะวีไอพี', icon: 'coins', visited: false }, { name: 'ห้องนิรภัย', icon: 'lock', visited: false }, { name: 'ลานจอดเฮลิคอปเตอร์', icon: 'navigation', visited: false }, { name: 'บาร์เครื่องดื่ม', icon: 'glass-water', visited: false } ], events: [ { title: 'ไฟดับกระทันหัน', desc: 'ระบบรักษาความปลอดภัยรวน เสียเวลาตรวจสอบ', timeChange: -1, icon: 'zap-off' } ] },
+      { name: 'โรงพยาบาลร้าง', theme: 'SILENT WARD', mapCode: 'SECTOR-05', mainIcon: 'hospital', locations: [ { name: 'ห้องผ่าตัด', icon: 'scissors', visited: false }, { name: 'ห้องดับจิต', icon: 'skull', visited: false }, { name: 'แผนกจิตเวช', icon: 'brain', visited: false }, { name: 'คลังยา', icon: 'pill', visited: false } ], events: [ { title: 'พบเบาะแสในเวชระเบียน', desc: 'ได้ข้อมูลสำคัญ ช่วยร่นเวลาการสืบสวน!', timeChange: +2, icon: 'file-text' } ] },
+      { name: 'ตลาดมืดไซเบอร์', theme: 'NEON ALLEY', mapCode: 'SECTOR-06', mainIcon: 'shopping-cart', locations: [ { name: 'ร้านดัดแปลงปืน', icon: 'crosshair', visited: false }, { name: 'ตรอกเสื่อมโทรม', icon: 'footprints', visited: false }, { name: 'บาร์โฮโลแกรม', icon: 'monitor-play', visited: false }, { name: 'จุดทิ้งขยะอิเล็กทรอนิกส์', icon: 'trash-2', visited: false } ], events: [ { title: 'อุปกรณ์ถูกขโมย', desc: 'โดนล้วงกระเป๋าในตลาดมืด ต้องหาอุปกรณ์ใหม่', timeChange: -2, icon: 'alert-triangle' } ] },
+      { name: 'ขบวนรถไฟหัวกระสุน', theme: 'MIDNIGHT EXPRESS', mapCode: 'SECTOR-07', mainIcon: 'train', locations: [ { name: 'ตู้คนขับ', icon: 'settings', visited: false }, { name: 'ตู้โดยสารชั้นเฟิร์สคลาส', icon: 'armchair', visited: false }, { name: 'ตู้สัมภาระ', icon: 'luggage', visited: false }, { name: 'หลังคารถไฟ', icon: 'wind', visited: false } ], events: [ { title: 'สัญญาณขาดหาย', desc: 'เข้าอุโมงค์ทำให้ติดต่อศูนย์ไม่ได้ชั่วคราว', timeChange: -1, icon: 'wifi-off' } ] },
+      { name: 'ท่าเรือขนส่งเถื่อน', theme: 'RUSTY DOCKS', mapCode: 'SECTOR-08', mainIcon: 'anchor', locations: [ { name: 'ตู้คอนเทนเนอร์', icon: 'box', visited: false }, { name: 'โกดังร้าง', icon: 'warehouse', visited: false }, { name: 'เครนยกของ', icon: 'arrow-up-to-line', visited: false }, { name: 'เรือประมงดัดแปลง', icon: 'ship', visited: false } ], events: [ { title: 'กรมศุลกากรเข้าตรวจค้น', desc: 'ต้องรอเคลียร์พื้นที่กับเจ้าหน้าที่รัฐ', timeChange: -2, icon: 'shield' } ] },
+      { name: 'หอคอยซิลิคอน', theme: 'TECH GOLIATH HQ', mapCode: 'SECTOR-09', mainIcon: 'cpu', locations: [ { name: 'เมนเฟรมเซิร์ฟเวอร์', icon: 'hard-drive', visited: false }, { name: 'สวนลอยฟ้า', icon: 'tree-deciduous', visited: false }, { name: 'ห้องซีอีโอ', icon: 'briefcase', visited: false }, { name: 'โซนพักผ่อนพนักงาน', icon: 'coffee', visited: false } ], events: [ { title: 'รหัสผ่านหลุดรอด', desc: 'สายสืบขโมยรหัสมาได้บางส่วน ทำงานไวขึ้น!', timeChange: +1, icon: 'unlock' } ] }
+    ];
+
+    const CASES = ['ภารกิจกู้รหัสขีปนาวุธ', 'ตามล่าแฮกเกอร์ระบบธนาคาร', 'สกัดกั้นการขายข้อมูลลับ', 'ระบุตัวหนอนบ่อนไส้', 'แผนปล้นทองคำข้ามชาติ', 'เครือข่ายค้าอาวุธเถื่อน'];
+
+    const SUSPECTS = [
+      { name: 'ดร.วิกเตอร์', role: 'หัวหน้าทีมวิจัย', img: 'microscope', confession: "งานวิจัยของฉันต้องใช้เงินทุนมหาศาล รัฐบาลไม่เคยเห็นค่ามัน ฉันเลยต้องขายข้อมูลให้ตลาดมืดเพื่อสร้างผลงานระดับโลก!" },
+      { name: 'อลิซ (แฮกเกอร์)', role: 'แฮกเกอร์อิสระ', img: 'terminal', confession: "ฉันไม่ได้ทำเพื่อเงินหรอกนะ แค่อยากพิสูจน์ให้โลกเห็นว่า ระบบรักษาความปลอดภัยที่พวกคุณอวดอ้างน่ะ มันก็แค่ของเด็กเล่น" },
+      { name: 'ผบ.แจ็คสัน', role: 'หัวหน้าหน่วย รปภ.', img: 'shield', confession: "ฉันอุทิศตัวให้องค์กรมา 20 ปี แต่กลับโดนเด็กรุ่นใหม่ข้ามหัวไปหมด! นี่คือบทลงโทษที่พวกแกสมควรได้รับ" },
+      { name: 'อีวา', role: 'นักเคมีประสาทวิทยา', img: 'brain', confession: "สารเคมีพวกนี้มันอันตรายเกินกว่าจะให้พวกกองทัพเอาไปใช้ก่อสงคราม ฉันตั้งใจจะขโมยมันไปทำลายทิ้งเอง!" },
+      { name: 'สายลับ K', role: 'สายลับสองหน้า', img: 'user-cog', confession: "ในวงการนี้ ไม่มีมิตรแท้หรือศัตรูถาวรหรอกนะ ฉันก็แค่เลือกอยู่ฝั่งที่จ่ายหนักกว่า... ธุรกิจก็คือธุรกิจ" },
+      { name: 'มร.โกลด์', role: 'นายหน้าค้าอาวุธ', img: 'briefcase', confession: "โลกนี้ขับเคลื่อนด้วยสงครามและอาวุธ ฉันก็แค่ฟันเฟืองตัวนึงที่ทำให้วงจรมันเดินหน้าต่อไปได้" }
+    ];
+
+    let gameState = { currentMap: null, currentCase: '', suspectCodes: [], secretCode: [], foundCode: [null, null, null, null], timeLeft: 15, locations: [], logs: [], culpritIndex: 0, currentPuzzle: null, currentLocationIndex: null, numPlayers: 1, currentPlayerIndex: 0, players: [], isNetworkGame: false, sessionId: null };
+    let playerStats = JSON.parse(localStorage.getItem('caseX_Stats')) || { solved: 0, rankS: 0, rankA: 0, rankB: 0, rankC: 0 };
+    
+    // Session Management with Firebase
+    function generateSessionId() {
+      return 'SESSION-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    }
+
+    function createNewSession() {
+      const sessionId = generateSessionId();
+      gameState.sessionId = sessionId;
+      gameState.isNetworkGame = true;
+      
+      const sessionData = {
+        sessionId: sessionId,
+        host: true,
+        players: [{ name: 'HOST', joinTime: Date.now() }],
+        gameStarted: false,
+        createdAt: Date.now()
+      };
+      
+      // Save to Firebase
+      database.ref('sessions/' + sessionId).set(sessionData).then(() => {
+        document.getElementById('sessionSetupScreen').classList.add('hidden');
+        document.getElementById('sessionCreateScreen').classList.remove('hidden');
+        document.getElementById('sessionIdDisplay').textContent = sessionId;
+        
+        // Generate QR Code
+        generateQRCode(sessionId);
+        
+        // Listen for real-time updates
+        database.ref('sessions/' + sessionId).on('value', (snapshot) => {
+          if (snapshot.exists()) {
+            const session = snapshot.val();
+            updateWaitingList(session);
+          }
+        });
+        
+        lucide.createIcons();
+      }).catch(error => {
+        alert('Firebase Error: ' + error.message);
+      });
+    }
+
+    function generateQRCode(sessionId) {
+      const qrContainer = document.getElementById('qrCodeContainer');
+      qrContainer.innerHTML = '';
+      new QRCode(qrContainer, {
+        text: sessionId,
+        width: 256,
+        height: 256,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function updateWaitingList(session) {
+      if (session && session.players) {
+        const container = document.getElementById('waitingPlayersContainer');
+        const startBtn = document.getElementById('startSessionBtn');
+        
+        container.innerHTML = session.players.map((p, idx) => `
+          <div class="bg-black border border-green-500/30 rounded p-3 flex items-center gap-3">
+            <i data-lucide="user-check" class="w-5 h-5 text-green-500"></i>
+            <span class="text-white flex-1">${p.name}</span>
+            <span class="text-xs text-zinc-500">${idx === 0 ? '(Host)' : '('+ (Date.now() - p.joinTime) + 'ms)'}</span>
+          </div>
+        `).join('');
+        
+        if (session.players.length >= 2) {
+          startBtn.classList.remove('hidden');
+        } else {
+          startBtn.classList.add('hidden');
+        }
+        
+        lucide.createIcons();
+      }
+    }
+
+    function copySessionId() {
+      const sessionId = document.getElementById('sessionIdDisplay').textContent;
+      navigator.clipboard.writeText(sessionId);
+      alert('SESSION ID copied: ' + sessionId);
+    }
+
+    function showJoinOptions() {
+      document.getElementById('sessionSetupScreen').classList.add('hidden');
+      document.getElementById('sessionJoinScreen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function showSessionIdInput() {
+      document.getElementById('sessionJoinScreen').classList.add('hidden');
+      document.getElementById('sessionIdInputScreen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function backToSessionSetup() {
+      document.getElementById('sessionCreateScreen').classList.add('hidden');
+      document.getElementById('sessionJoinScreen').classList.add('hidden');
+      document.getElementById('sessionIdInputScreen').classList.add('hidden');
+      document.getElementById('sessionSetupScreen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function backToSessionJoin() {
+      document.getElementById('sessionIdInputScreen').classList.add('hidden');
+      document.getElementById('sessionJoinScreen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function joinSession() {
+      const sessionId = document.getElementById('sessionIdInput').value.trim().toUpperCase();
+      const playerName = document.getElementById('playerNameInput').value.trim();
+      
+      if (!sessionId) {
+        alert('โปรดใส่ SESSION ID');
+        return;
+      }
+      
+      if (!playerName) {
+        alert('โปรดใส่ชื่อผู้เล่น');
+        return;
+      }
+      
+      // Check if session exists in Firebase
+      database.ref('sessions/' + sessionId).once('value').then((snapshot) => {
+        if (!snapshot.exists()) {
+          alert('SESSION ID ไม่พบ ตรวจสอบและลองอีกครั้ง');
+          return;
+        }
+        
+        const session = snapshot.val();
+        
+        // Add player to session
+        session.players.push({ name: playerName, joinTime: Date.now() });
+        database.ref('sessions/' + sessionId).update({ players: session.players }).then(() => {
+          gameState.sessionId = sessionId;
+          gameState.isNetworkGame = true;
+          gameState.players = session.players.map((p, i) => ({
+            id: i,
+            name: p.name,
+            solved: 0,
+            rankS: 0,
+            timeScores: []
+          }));
+          gameState.numPlayers = gameState.players.length;
+          gameState.currentPlayerIndex = gameState.players.length - 1;
+          
+          // Go to map selection
+          document.getElementById('sessionIdInputScreen').classList.add('hidden');
+          document.getElementById('playerSetupScreen').classList.add('hidden');
+          document.getElementById('sessionSetupScreen').classList.add('hidden');
+          document.getElementById('mapSelectScreen').classList.remove('hidden');
+          renderMaps();
+          lucide.createIcons();
+        }).catch(error => {
+          alert('Firebase Error: ' + error.message);
+        });
+      }).catch(error => {
+        alert('Firebase Error: ' + error.message);
+      });
+    }
+
+    function startLocalGame() {
+      document.getElementById('sessionSetupScreen').classList.add('hidden');
+      document.getElementById('playerSetupScreen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function startSessionGame() {
+      const sessionId = gameState.sessionId;
+      
+      // Update Firebase
+      database.ref('sessions/' + sessionId).update({ gameStarted: true }).then(() => {
+        // Read current session data
+        database.ref('sessions/' + sessionId).once('value').then((snapshot) => {
+          if (snapshot.exists()) {
+            const session = snapshot.val();
+            
+            // Initialize players array
+            gameState.players = session.players.map((p, i) => ({
+              id: i,
+              name: p.name,
+              solved: 0,
+              rankS: 0,
+              timeScores: []
+            }));
+            gameState.numPlayers = gameState.players.length;
+            gameState.currentPlayerIndex = 0;
+            
+            document.getElementById('sessionCreateScreen').classList.add('hidden');
+            document.getElementById('mapSelectScreen').classList.remove('hidden');
+            renderMaps();
+            lucide.createIcons();
+          }
+        });
+      }).catch(error => {
+        alert('Firebase Error: ' + error.message);
+      });
+    }
+    
+    function showPlayerSetup() {
+      document.getElementById('startScreen').classList.add('hidden');
+      document.getElementById('sessionSetupScreen').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function setupGame(numPlayers) {
+      gameState.numPlayers = numPlayers;
+      gameState.currentPlayerIndex = 0;
+      gameState.players = [];
+      for (let i = 0; i < numPlayers; i++) {
+        gameState.players.push({
+          id: i,
+          name: `Player ${i + 1}`,
+          solved: 0,
+          rankS: 0,
+          timeScores: []
+        });
+      }
+      startGame();
+    }
+    
+    function updateStatsUI() {
+      document.getElementById('statSolved').textContent = playerStats.solved;
+      document.getElementById('statRankS').textContent = playerStats.rankS;
+    }
+
+    function calculateRank(daysLeft) {
+      if (daysLeft >= 12) return { grade: 'S', title: 'MASTER DETECTIVE', color: 'text-yellow-500', bg: 'bg-yellow-500/20' };
+      if (daysLeft >= 8) return { grade: 'A', title: 'ELITE INVESTIGATOR', color: 'text-blue-400', bg: 'bg-blue-500/20' };
+      if (daysLeft >= 4) return { grade: 'B', title: 'SENIOR AGENT', color: 'text-green-400', bg: 'bg-green-500/20' };
+      return { grade: 'C', title: 'ROOKIE COP', color: 'text-zinc-400', bg: 'bg-zinc-500/20' };
+    }
+
+    function generatePuzzle() {
+      const types = ['system_eq', 'quad_eq', 'speed_dist', 'gcd_lcm', 'probability', 'inequality', 'geometry'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      let q, hint, answer;
+      
+      if (type === 'gcd_lcm') {
+        const n1 = (Math.floor(Math.random() * 4) + 2) * 2; 
+        const n2 = (Math.floor(Math.random() * 3) + 1) * 3; 
+        const gcd = (x, y) => (!y ? x : gcd(y, x % y));
+        answer = (n1 * n2) / gcd(n1, n2);
+        q = `สายลับ 2 นายออกลาดตระเวนหาข่าว\nสายลับ A ติดต่อกลับฐานทุกๆ ${n1} วัน\nสายลับ B ติดต่อกลับฐานทุกๆ ${n2} วัน\n\nถ้าวันนี้ทั้งคู่ส่งข่าวพร้อมกัน อีกกี่วันพวกเขาจึงจะส่งข่าวพร้อมกันอีกครั้ง?`;
+        hint = `หา ค.ร.น. ของ ${n1} และ ${n2}`;
+      } else if (type === 'probability') {
+        const r = Math.floor(Math.random() * 5) + 3; const b = Math.floor(Math.random() * 5) + 3;
+        const total = r + b; const gcd = (x, y) => (!y ? x : gcd(y, x % y)); const g = gcd(r, total);
+        answer = (r / g) + (total / g);
+        q = `ระบบล็อกรหัสผ่านแบบสุ่มลูกแก้ว\nมีลูกแก้วสีแดง ${r} ลูก และสีฟ้า ${b} ลูก\nโอกาสที่จะหลับตาสุ่มหยิบ 1 ลูกแล้วได้ "สีแดง" คือ R / T (ในรูปแบบเศษส่วนอย่างต่ำ)\n\nจงหาค่า R + T เพื่อปลดล็อก`;
+        hint = `โอกาส = ${r} / ${total} ทำให้เป็นเศษส่วนอย่างต่ำจะได้ ${r/g} / ${total/g}`;
+      } else if (type === 'inequality') {
+        const m = Math.floor(Math.random() * 4) + 2; const c = Math.floor(Math.random() * 10) + 5; const base_x = Math.floor(Math.random() * 8) + 5;
+        const target = (m * base_x) + c + (Math.floor(Math.random() * m) + 1);
+        answer = Math.ceil((target - c) / m) - 1;
+        q = `ถอดรหัสเซิร์ฟเวอร์ด้วยอสมการ:\n${m}x + ${c} < ${target}\n\nรหัสผ่านคือ "ค่าจำนวนเต็ม x ที่มากที่สุด" ที่ทำให้ระบบเสถียร`;
+        hint = `ย้ายข้าง: ${m}x < ${target - c} จากนั้นหาจำนวนเต็ม x ที่มากที่สุด`;
+      } else if (type === 'geometry') {
+        const w = Math.floor(Math.random() * 8) + 4; const l = w + Math.floor(Math.random() * 5) + 2;
+        answer = w * l;
+        q = `พิมพ์เขียวห้องลับของเป้าหมายเป็นรูปสี่เหลี่ยมผืนผ้า\nเซนเซอร์วัดความยาวรอบห้องได้ ${2 * (w + l)} เมตร และรู้ว่าด้านกว้างยาว ${w} เมตร\n\nรหัสผ่านคือพื้นที่ของห้องลับนี้ (ตารางเมตร)`;
+        hint = `ความยาวรอบรูป = 2(กว้าง + ยาว) หาความยาวให้เจอก่อน แล้วเอา กว้าง × ยาว`;
+      } else if (type === 'system_eq') { 
+        const x = Math.floor(Math.random() * 20) + 5; const y = Math.floor(Math.random() * (x - 2)) + 1;
+        answer = x;
+        q = `พบระบบสมการสองตัวแปร:\n1) x + y = ${x+y}\n2) x - y = ${x-y}\n\nจงหาค่าของ x`;
+        hint = `นำสมการมาบวกกันจะได้ 2x = ${(x+y)+(x-y)}`; 
+      } else if (type === 'quad_eq') { 
+        const a = Math.floor(Math.random() * 8) + 3; const b = Math.floor(Math.random() * (a - 1)) + 1;
+        answer = a; 
+        q = `ถอดรหัสพหุนาม:\nx² - ${a+b}x + ${a*b} = 0\n\nรหัสคือ "ค่าของ x ที่มากที่สุด"`;
+        hint = `หาเลข 2 ตัวที่คูณกันได้ ${a*b} และบวกกันได้ ${a+b}`; 
+      } else {
+        const S = [60, 80, 90, 100][Math.floor(Math.random() * 4)]; const T = Math.floor(Math.random() * 4) + 2;
+        answer = T;
+        q = `เป้าหมายขับรถหนีด้วยความเร็ว ${S} กม./ชม. เดินทางไปไกลถึง ${S*T} กม. แล้ว\nเป้าหมายใช้เวลาหลบหนีไปกี่ชั่วโมง?`;
+        hint = `เวลา = ระยะทาง ÷ ความเร็ว`; 
+      }
+      return { q, hint, answer };
+    }
+
+    function startGame() {
+      document.getElementById('playerSetupScreen').classList.add('hidden');
+      document.getElementById('mapSelectScreen').classList.remove('hidden');
+      renderMaps();
+      lucide.createIcons();
+    }
+
+    function renderMaps() {
+      const mapsGrid = document.getElementById('mapsGrid');
+      mapsGrid.innerHTML = MAPS.map((map, index) => `
+        <div onclick="selectMap(${index})" class="folder-card cursor-pointer p-6 flex flex-col justify-between h-full">
+         <div>
+           <div class="flex justify-between items-start mb-4">
+             <i data-lucide="${map.mainIcon || 'folder-search'}" class="w-10 h-10 text-zinc-400"></i>
+             <span class="text-xs font-typewriter bg-red-900/30 text-red-500 border border-red-900/50 px-2 py-1 rounded shadow-[0_0_8px_rgba(220,38,38,0.2)]">${map.mapCode}</span>
+           </div>
+           <h3 class="text-xl font-bold text-white mb-1">${map.name}</h3>
+           <p class="text-[11px] text-zinc-500 font-typewriter tracking-widest">${map.theme}</p>
+         </div>
+        </div>
+      `).join('');
+    }
+
+    function selectMap(mapIndex) {
+      gameState.currentMap = mapIndex;
+      gameState.currentCase = CASES[Math.floor(Math.random() * CASES.length)];
+      gameState.suspectCodes = SUSPECTS.map(() => Array.from({length: 4}, () => Math.floor(Math.random() * 10)).join(''));
+      gameState.culpritIndex = Math.floor(Math.random() * SUSPECTS.length);
+      gameState.secretCode = gameState.suspectCodes[gameState.culpritIndex].split('').map(Number);
+      gameState.locations = JSON.parse(JSON.stringify(MAPS[mapIndex].locations));
+      gameState.foundCode = [null, null, null, null];
+      gameState.timeLeft = 15;
+      gameState.logs = [];
+      gameState.currentPlayerIndex = 0;
+      
+      document.getElementById('mapSelectScreen').classList.add('hidden');
+      document.getElementById('caseScreen').classList.remove('hidden');
+      document.getElementById('caseDescription').textContent = gameState.currentCase;
+      lucide.createIcons();
+    }
+
+    function startInvestigation() {
+      document.getElementById('caseScreen').classList.add('hidden');
+      document.getElementById('gameScreen').classList.remove('hidden');
+      document.getElementById('currentMapName').textContent = MAPS[gameState.currentMap].name;
+      document.getElementById('currentCase').textContent = `CASE: ${gameState.currentCase}`;
+      
+      if (gameState.isNetworkGame && gameState.sessionId) {
+        document.getElementById('sessionDisplayInfo').textContent = `SESSION: ${gameState.sessionId}`;
+      }
+      
+      updatePlayerIndicator();
+      renderLocations(); updateTimeDisplay(); updateCodeDisplay();
+      addLog('power', `${gameState.players[gameState.currentPlayerIndex].name} เริ่มสืบสวน`, 'text-green-500');
+    }
+
+    function updatePlayerIndicator() {
+      const indicator = document.getElementById('playerIndicator');
+      const scoreboardBtn = document.getElementById('playersScoreboard');
+      if (gameState.numPlayers > 1) {
+        indicator.classList.remove('hidden');
+        indicator.innerHTML = `<i data-lucide="user-check" class="w-5 h-5 inline mr-2"></i> ${gameState.players[gameState.currentPlayerIndex].name}`;
+        scoreboardBtn.classList.remove('hidden');
+        lucide.createIcons();
+      } else {
+        indicator.classList.add('hidden');
+        scoreboardBtn.classList.add('hidden');
+      }
+    }
+
+    function showPlayerScoreboard() {
+      const players = gameState.players;
+      const sortedPlayers = [...players].sort((a, b) => {
+        if (b.solved !== a.solved) return b.solved - a.solved;
+        return b.rankS - a.rankS;
+      });
+
+      let html = `
+        <div class="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div class="bg-black rounded-lg max-w-2xl w-full border border-zinc-800 shadow-[0_0_50px_rgba(220,38,38,0.1)]">
+            <div class="sticky top-0 z-20 bg-black/95 border-b border-zinc-800 px-6 py-4 backdrop-blur-xl">
+              <div class="flex items-center justify-between">
+                <h3 class="text-2xl font-black text-white flex items-center gap-3 tracking-widest uppercase">
+                  <i data-lucide="trophy" class="w-8 h-8 text-yellow-400"></i> PLAYERS SCOREBOARD
+                </h3>
+                <button onclick="this.closest('.fixed').remove(); lucide.createIcons();" class="text-zinc-500 hover:text-white transition bg-zinc-900 p-2 rounded border border-zinc-800"> 
+                  <i data-lucide="x" class="w-5 h-5"></i> 
+                </button>
+              </div>
+            </div>
+            <div class="px-6 pb-6 pt-6">
+              <table class="w-full">
+                <thead class="border-b border-zinc-700">
+                  <tr class="text-yellow-400 font-bold text-sm">
+                    <th class="pb-3 text-left">Rank</th>
+                    <th class="pb-3 text-left">Player</th>
+                    <th class="pb-3 text-center">Solved</th>
+                    <th class="pb-3 text-center">Rank S</th>
+                  </tr>
+                </thead>
+                <tbody class="text-white text-sm">
+                  ${sortedPlayers.map((p, idx) => `
+                    <tr class="border-b border-zinc-800 py-4 ${p.id === gameState.players[gameState.currentPlayerIndex].id ? 'bg-blue-900/30' : ''} ${idx === 0 ? 'bg-yellow-900/20' : idx === 1 ? 'bg-gray-600/20' : idx === 2 ? 'bg-orange-600/20' : ''}">
+                      <td class="py-3 font-bold text-lg">${idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</td>
+                      <td class="py-3">${p.name}${p.id === gameState.players[gameState.currentPlayerIndex].id ? ' <span class="text-blue-400">(You)</span>' : ''}</td>
+                      <td class="py-3 text-center text-green-400">⭐ ${p.solved}</td>
+                      <td class="py-3 text-center text-yellow-400">✓ ${p.rankS}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.insertAdjacentHTML('beforeend', html);
+      lucide.createIcons();
+    }
+
+    function updateTimeDisplay() {
+      const display = document.getElementById('timeLeftDisplay');
+      display.textContent = `${gameState.timeLeft}d`;
+      display.className = `text-3xl font-black font-typewriter ${gameState.timeLeft <= 3 ? 'text-red-600 animate-pulse' : 'text-yellow-500 drop-shadow-[0_0_8px_rgba(234,179,8,0.5)]'}`;
+    }
+
+    function renderLocations() {
+      document.getElementById('locationsGrid').innerHTML = gameState.locations.map((loc, idx) => `
+        <div onclick="visitLocation(${idx})" class="location-card rounded p-6 cursor-pointer text-center ${loc.visited ? 'visited' : ''}">
+          <i data-lucide="${loc.icon}" class="w-12 h-12 mx-auto mb-4 ${loc.visited ? 'text-zinc-600' : 'text-zinc-300'}"></i>
+          <h4 class="font-bold text-sm text-white mb-2">${loc.name}</h4>
+        </div>`).join('');
+      lucide.createIcons();
+    }
+
+    function visitLocation(idx) {
+      if(gameState.timeLeft <= 0) return checkGameOver();
+      if(gameState.locations[idx].visited) return addLog('alert-circle', 'จุดนี้ตรวจไปแล้ว', 'text-zinc-500');
+      
+      gameState.timeLeft -= 1; updateTimeDisplay(); if(checkGameOver()) return;
+      gameState.currentLocationIndex = idx;
+      gameState.currentPuzzle = generatePuzzle();
+      
+      document.getElementById('puzzleQuestion').textContent = gameState.currentPuzzle.q;
+      document.getElementById('puzzleHint').textContent = gameState.currentPuzzle.hint;
+      document.getElementById('showHintBtn').classList.remove('hidden');
+      document.getElementById('puzzleHintContainer').classList.add('hidden');
+      document.getElementById('puzzleAnswer').value = '';
+      document.getElementById('puzzleModal').classList.remove('hidden');
+    }
+
+    function useHint() {
+      if(gameState.timeLeft <= 2) return alert("เวลาไม่พอรอผลแล็บ!");
+      gameState.timeLeft -= 2; updateTimeDisplay();
+      document.getElementById('showHintBtn').classList.add('hidden');
+      document.getElementById('puzzleHintContainer').classList.remove('hidden');
+    }
+
+    function submitAnswer() {
+      const ans = parseInt(document.getElementById('puzzleAnswer').value);
+      if(isNaN(ans)) return;
+      if(ans === gameState.currentPuzzle.answer) {
+        gameState.locations[gameState.currentLocationIndex].visited = true;
+        const emptyIdx = gameState.foundCode.findIndex(c => c === null);
+        if(emptyIdx !== -1) gameState.foundCode[emptyIdx] = gameState.secretCode[emptyIdx];
+        closePuzzleModal(); renderLocations(); updateCodeDisplay();
+        addLog('check-circle', `พบเบาะแสที่ ${gameState.locations[gameState.currentLocationIndex].name}`, 'text-blue-400');
+      } else {
+        gameState.timeLeft -= 3; updateTimeDisplay();
+        document.getElementById('puzzleAnswer').classList.add('animate-shake', 'border-red-600');
+        setTimeout(() => document.getElementById('puzzleAnswer').classList.remove('animate-shake', 'border-red-600'), 600);
+        checkGameOver();
+      }
+    }
+
+    function checkGameOver() {
+      if(gameState.timeLeft <= 0) {
+        closePuzzleModal(); showResultModal(false, true); return true;
+      }
+      return false;
+    }
+
+    function showSuspects() {
+      const codeComplete = gameState.foundCode.every(c => c !== null);
+      const codeStatus = document.getElementById('codeStatus');
+      if (codeComplete) {
+        codeStatus.innerHTML = `
+          <p class="text-green-500 font-bold mb-3 font-typewriter tracking-widest text-lg">FULL EVIDENCE COMPILED:</p>
+          <div class="flex justify-center gap-3">
+            ${gameState.foundCode.map(d => `<span class="bg-black border-2 border-green-500 text-green-400 w-14 h-14 rounded flex items-center justify-center text-3xl font-black shadow-[0_0_15px_rgba(34,197,94,0.4)]">${d}</span>`).join('')}
+          </div>`;
+      } else {
+        const found = gameState.foundCode.filter(c => c !== null).length;
+        codeStatus.innerHTML = `<p class="text-yellow-500 font-bold">รวบรวมหลักฐานได้เพียง ${found}/4 ส่วน... ศาลยังไม่อนุมัติหมายจับ</p>`;
+      }
+      
+      document.getElementById('suspectsGrid').innerHTML = SUSPECTS.map((s, idx) => `
+        <div onclick="${codeComplete ? `accuseSuspect(${idx})` : ''}" class="bg-black rounded p-5 text-center border border-zinc-800 transition ${codeComplete ? 'cursor-pointer hover:border-red-600' : 'opacity-40 grayscale'}">
+          <i data-lucide="${s.img}" class="w-8 h-8 mx-auto mb-3 text-zinc-300"></i>
+          <h4 class="font-bold text-sm text-white">${s.name}</h4>
+          <p class="text-[10px] text-zinc-500 mb-3">${s.role}</p>
+          <p class="font-bold text-yellow-500 tracking-[0.3em]">${gameState.suspectCodes[idx]}</p>
+        </div>`).join('');
+      
+      document.getElementById('accuseSection').classList.toggle('hidden', !codeComplete);
+      document.getElementById('suspectsModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function accuseSuspect(idx) {
+      closeSuspectsModal();
+      const isCorrect = idx === gameState.culpritIndex;
+      const suspect = SUSPECTS[idx];
+      const rank = calculateRank(gameState.timeLeft);
+      
+      gameState.players[gameState.currentPlayerIndex].timeScores.push({
+        solved: isCorrect,
+        rank: rank.grade,
+        daysLeft: gameState.timeLeft
+      });
+      
+      if (isCorrect) {
+        gameState.players[gameState.currentPlayerIndex].solved++;
+        if (rank.grade === 'S') gameState.players[gameState.currentPlayerIndex].rankS++;
+      }
+      
+      // Check if multiplayer game is complete
+      if (gameState.numPlayers > 1 && gameState.currentPlayerIndex < gameState.numPlayers - 1) {
+        // Next player's turn
+        gameState.currentPlayerIndex++;
+        resetForNextPlayer();
+      } else {
+        // Game complete, show final results
+        showResultModal(isCorrect, false, suspect);
+      }
+    }
+
+    function resetForNextPlayer() {
+      // Reset game state for next player
+      gameState.foundCode = [null, null, null, null];
+      gameState.timeLeft = 15;
+      gameState.logs = [];
+      gameState.currentMap = null;
+      gameState.locations = [];
+      
+      // Close current screens and return to map selection
+      document.getElementById('gameScreen').classList.add('hidden');
+      document.getElementById('mapSelectScreen').classList.remove('hidden');
+      renderMaps();
+      addLog('users', `${gameState.players[gameState.currentPlayerIndex].name} เตรียมพร้อม`, 'text-blue-400');
+      lucide.createIcons();
+    }
+
+    function showResultModal(isCorrect, isTimeOut = false, suspect = null) {
+      const container = document.getElementById('resultContent');
+      let html = '';
+
+      if (gameState.numPlayers > 1 && gameState.currentPlayerIndex === gameState.numPlayers - 1) {
+        // Multiplayer final results
+        const sortedPlayers = [...gameState.players].sort((a, b) => {
+          if (b.solved !== a.solved) return b.solved - a.solved;
+          return b.rankS - a.rankS;
+        });
+
+        html = `
+          <div class="absolute top-0 left-0 w-full h-2 ${isCorrect ? 'bg-green-500' : 'bg-red-600'}"></div>
+          <i data-lucide="trophy" class="w-24 h-24 text-yellow-400 mx-auto mb-6"></i>
+          <h2 class="text-4xl font-black text-white mb-2 tracking-widest">MULTIPLAYER RESULTS</h2>
+          <p class="text-zinc-400 mb-8">สิ้นสุดรอบการสืบสวนของผู้เล่นทั้งหมด</p>
+          
+          <div class="bg-zinc-900 border border-zinc-700 rounded p-6 mb-8 max-h-[400px] overflow-y-auto">
+            <table class="w-full text-left">
+              <thead class="border-b border-zinc-600">
+                <tr class="text-yellow-400 font-bold">
+                  <th class="pb-4">Rank</th>
+                  <th class="pb-4">Player</th>
+                  <th class="pb-4">Cases Solved</th>
+                  <th class="pb-4">Rank S</th>
+                </tr>
+              </thead>
+              <tbody class="text-white">
+                ${sortedPlayers.map((p, idx) => `
+                  <tr class="border-b border-zinc-800 py-3 ${idx === 0 ? 'bg-yellow-900/20' : idx === 1 ? 'bg-gray-600/20' : idx === 2 ? 'bg-orange-600/20' : ''}">
+                    <td class="py-3 font-bold text-lg">${idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}</td>
+                    <td class="py-3">${p.name}</td>
+                    <td class="py-3 text-green-400">⭐ ${p.solved}</td>
+                    <td class="py-3 text-yellow-400">✓ ${p.rankS}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="text-left mb-6 bg-zinc-900/50 border border-zinc-700 rounded p-4">
+            <p class="text-yellow-400 font-bold mb-2"><i data-lucide="crown" class="w-5 h-5 inline mr-2"></i> CHAMPION: ${sortedPlayers[0].name}</p>
+            <p class="text-white">Cases: ${sortedPlayers[0].solved} | Rank S: ${sortedPlayers[0].rankS}</p>
+          </div>
+
+          <button onclick="resetGame()" class="w-full bg-yellow-600 text-white py-4 rounded font-bold uppercase tracking-widest hover:bg-yellow-500 transition">เริ่มรอบการสืบสวนใหม่</button>
+        `;
+      } else if (isCorrect) {
+        const rank = calculateRank(gameState.timeLeft);
+        playerStats.solved++;
+        if (rank.grade === 'S') playerStats.rankS++;
+        else if (rank.grade === 'A') playerStats.rankA++;
+        else if (rank.grade === 'B') playerStats.rankB++;
+        else playerStats.rankC++;
+        localStorage.setItem('caseX_Stats', JSON.stringify(playerStats));
+        updateStatsUI();
+
+        html = `
+          <div class="absolute top-0 left-0 w-full h-2 bg-green-500"></div>
+          <i data-lucide="shield-check" class="w-24 h-24 text-green-500 mx-auto mb-6"></i>
+          <h2 class="text-4xl font-black text-white mb-2 tracking-widest">MISSION SUCCESS</h2>
+          <p class="text-zinc-400 mb-6">หลักฐานมัดตัวแน่นหนา จับกุม ${suspect.name} ได้สำเร็จ!</p>
+          <div class="bg-zinc-900 border border-zinc-700 rounded p-6 mb-6 text-left relative">
+            <i data-lucide="quote" class="w-8 h-8 text-zinc-700 absolute top-4 left-4"></i>
+            <p class="text-white italic pl-10 pr-4 py-2 font-typewriter">"${suspect.confession}"</p>
+            <p class="text-right text-xs text-zinc-500 mt-2">- คำรับสารภาพจากผู้ต้องหา</p>
+          </div>
+          <div class="${rank.bg} border border-${rank.color.split('-')[1]}-500/50 rounded p-6 mb-8">
+            <p class="text-xs text-zinc-400 mb-1">EVALUATION RANK:</p>
+            <h1 class="text-6xl font-black ${rank.color} mb-2">${rank.grade}</h1>
+            <p class="${rank.color} font-bold tracking-widest">${rank.title}</p>
+            <p class="text-sm text-zinc-300 mt-2">เวลาเหลือ: ${gameState.timeLeft} วัน</p>
+          </div>
+          <button onclick="resetGame()" class="w-full bg-green-700 text-white py-4 rounded font-bold uppercase tracking-widest hover:bg-green-600 transition">รับแฟ้มคดีต่อไป</button>
+        `;
+      } else if (isTimeOut) {
+        html = `
+          <div class="absolute top-0 left-0 w-full h-2 bg-red-600"></div>
+          <i data-lucide="skull" class="w-24 h-24 text-red-600 mx-auto mb-6"></i>
+          <h2 class="text-4xl font-black text-red-500 mb-2">CASE CLOSED (UNSOLVED)</h2>
+          <p class="text-zinc-400 mb-8">หมดเวลา! ศาลสั่งปิดคดี อาชญากรหลบหนีไปได้</p>
+          <button onclick="resetGame()" class="w-full bg-zinc-800 text-white py-4 rounded font-bold uppercase hover:bg-zinc-700">เริ่มทำคดีใหม่</button>
+        `;
+      } else {
+        html = `
+          <div class="absolute top-0 left-0 w-full h-2 bg-red-600"></div>
+          <i data-lucide="user-x" class="w-24 h-24 text-red-600 mx-auto mb-6"></i>
+          <h2 class="text-4xl font-black text-red-500 mb-2">FATAL ERROR</h2>
+          <p class="text-zinc-400 mb-6">จับผิดตัว! คนร้ายไหวตัวหนีไปแล้ว เป้าหมายตัวจริงคือ <b class="text-white">${SUSPECTS[gameState.culpritIndex].name}</b></p>
+          <button onclick="resetGame()" class="w-full bg-red-600 text-white py-4 rounded font-bold uppercase hover:bg-red-500">รื้อคดีใหม่</button>
+        `;
+      }
+      container.innerHTML = html;
+      document.getElementById('resultModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function resetGame() { window.location.reload(); }
+    function closePuzzleModal() { document.getElementById('puzzleModal').classList.add('hidden'); }
+    function closeSuspectsModal() { document.getElementById('suspectsModal').classList.add('hidden'); }
+    function updateCodeDisplay() { gameState.foundCode.forEach((c,i) => { const el=document.getElementById(`code${i}`); if(c!==null){ el.textContent=c; el.classList.add('revealed');} }); }
+    function addLog(icon, text, color) { gameState.logs.unshift({icon, text, color, time: `เหลือ ${gameState.timeLeft} วัน`}); document.getElementById('logContainer').innerHTML = gameState.logs.map(l => `<p class="${l.color}"><i data-lucide="${l.icon}" class="w-3 h-3 inline"></i> [${l.time}] ${l.text}</p>`).join(''); lucide.createIcons(); }
+    
+    document.addEventListener('DOMContentLoaded', () => { updateStatsUI(); lucide.createIcons(); });
+  </script>
+ </body>
+</html>
