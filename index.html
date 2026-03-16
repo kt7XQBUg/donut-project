@@ -360,11 +360,22 @@
       appId: "1:995860841352:web:b62f91fab3621aa4f8f03d"
     };
 
-    if (!firebase.apps.length) {
-      firebase.initializeApp(firebaseConfig);
+    // Wait for Firebase to be available
+    function initializeFirebase() {
+      if (typeof firebase === 'undefined') {
+        setTimeout(initializeFirebase, 100);
+        return;
+      }
+      
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+      }
+      database = firebase.database();
+      firebaseReady = true;
     }
-    database = firebase.database();
-    firebaseReady = true;
+
+    // Start initialization
+    initializeFirebase();
   </script>
 
   <script>
