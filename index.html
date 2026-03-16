@@ -367,15 +367,21 @@
         return;
       }
       
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(firebaseConfig);
+        }
+        database = firebase.database();
+        firebaseReady = true;
+        console.log('Firebase initialized successfully');
+      } catch (error) {
+        console.error('Firebase initialization failed:', error);
+        setTimeout(initializeFirebase, 500);
       }
-      database = firebase.database();
-      firebaseReady = true;
     }
 
-    // Start initialization
-    initializeFirebase();
+    // Start initialization with a small delay to ensure SDK is fully loaded
+    setTimeout(initializeFirebase, 100);
   </script>
 
   <script>
@@ -411,6 +417,11 @@
     }
 
     function createNewSession() {
+      if (!firebaseReady || !database) {
+        alert('Firebase is loading... Please wait a moment and try again.');
+        return;
+      }
+      
       const sessionId = generateSessionId();
       gameState.sessionId = sessionId;
       gameState.isNetworkGame = true;
