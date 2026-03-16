@@ -363,25 +363,53 @@
     // Wait for Firebase to be available
     function initializeFirebase() {
       if (typeof firebase === 'undefined') {
+        console.log('Firebase SDK not loaded yet, retrying...');
         setTimeout(initializeFirebase, 100);
         return;
       }
       
       try {
         if (!firebase.apps.length) {
+          console.log('Initializing Firebase app...');
           firebase.initializeApp(firebaseConfig);
         }
         database = firebase.database();
         firebaseReady = true;
-        console.log('Firebase initialized successfully');
+        console.log('✓ Firebase initialized successfully');
+        console.log('✓ Database ref:', database);
       } catch (error) {
-        console.error('Firebase initialization failed:', error);
+        console.error('✗ Firebase initialization failed:', error);
         setTimeout(initializeFirebase, 500);
       }
     }
 
-    // Start initialization with a small delay to ensure SDK is fully loaded
-    setTimeout(initializeFirebase, 100);
+    // Start initialization immediately
+    initializeFirebase();
+
+    // Ensure Firebase is ready before using it
+    function ensureFirebaseReady() {
+      return new Promise((resolve) => {
+        if (firebaseReady && database) {
+          resolve();
+          return;
+        }
+        
+        // Wait for Firebase to be ready
+        const maxAttempts = 50;
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+          attempts++;
+          if (firebaseReady && database) {
+            clearInterval(checkInterval);
+            resolve();
+          } else if (attempts >= maxAttempts) {
+            clearInterval(checkInterval);
+            console.error('Firebase failed to initialize after 5 seconds');
+            resolve(); // Resolve anyway to avoid hanging
+          }
+        }, 100);
+      });
+    }
   </script>
 
   <script>
@@ -417,43 +445,58 @@
     }
 
     function createNewSession() {
-      if (!firebaseReady || !database) {
-        alert('Firebase is loading... Please wait a moment and try again.');
-        return;
-      }
+      // Show loading and wait for Firebase
+      document.getElementById('sessionSetupScreen').classList.add('hidden');
+      const loadingMsg = document.createElement('div');
+      loadingMsg.innerHTML = '<div class="min-h-full flex items-center justify-center"><div class="text-center"><div class="animate-spin text-4xl mb-4">⏳</div><p class="text-white text-lg">กำลังเริ่มต้นเซッ션ใหม่...</p></div></div>';
+      document.getElementById('app').appendChild(loadingMsg);
       
-      const sessionId = generateSessionId();
-      gameState.sessionId = sessionId;
-      gameState.isNetworkGame = true;
-      
-      const sessionData = {
-        sessionId: sessionId,
-        host: true,
-        players: [{ name: 'HOST', joinTime: Date.now() }],
-        gameStarted: false,
-        createdAt: Date.now()
-      };
-      
-      // Save to Firebase
-      database.ref('sessions/' + sessionId).set(sessionData).then(() => {
-        document.getElementById('sessionSetupScreen').classList.add('hidden');
-        document.getElementById('sessionCreateScreen').classList.remove('hidden');
-        document.getElementById('sessionIdDisplay').textContent = sessionId;
+      ensureFirebaseReady().then(() => {
+        if (!database) {
+          alert('Firebase connection failed. Please reload the page.');
+          loadingMsg.remove();
+          document.getElementById('sessionSetupScreen').classList.remove('hidden');
+          return;
+        }
         
-        // Generate QR Code
-        generateQRCode(sessionId);
+        loadingMsg.remove();
         
-        // Listen for real-time updates
-        database.ref('sessions/' + sessionId).on('value', (snapshot) => {
-          if (snapshot.exists()) {
-            const session = snapshot.val();
-            updateWaitingList(session);
-          }
+        const sessionId = generateSessionId();
+        gameState.sessionId = sessionId;
+        gameState.isNetworkGame = true;
+        
+        const sessionData = {
+          sessionId: sessionId,
+          host: true,
+          players: [{ name: 'HOST', joinTime: Date.now() }],
+          gameStarted: false,
+          createdAt: Date.now()
+        };
+        
+        // Save to Firebase
+        database.ref('sessions/' + sessionId).set(sessionData).then(() => {
+          document.getElementById('sessionSetupScreen').classList.add('hidden');
+          document.getElementById('sessionCreateScreen').classList.remove('hidden');
+          document.getElementById('sessionIdDisplay').textContent = sessionId;
+          
+          // Generate QR Code
+          generateQRCode(sessionId);
+          
+          // Listen for real-time updates
+          database.ref('sessions/' + sessionId).on('value', (snapshot) => {
+            if (snapshot.exists()) {
+              const session = snapshot.val();
+              updateWaitingList(session);
+            }
+          });
+          
+          lucide.createIcons();
+        }).catch(error => {
+          alert('Firebase Error: ' + error.message);
+          console.error('Firebase error:', error);
+          document.getElementById('sessionSetupScreen').classList.remove('hidden');
+          document.getElementById('sessionCreateScreen').classList.add('hidden');
         });
-        
-        lucide.createIcons();
-      }).catch(error => {
-        alert('Firebase Error: ' + error.message);
       });
     }
 
@@ -526,60 +569,79 @@
     }
 
     function joinSession() {
-      if (!firebaseReady || !database) {
-        alert('Firebase is loading... Please wait a moment and try again.');
-        return;
-      }
+      // Show loading and wait for Firebase
+      document.getElementById('sessionIdInputScreen').classList.add('hidden');
+      const loadingMsg = document.createElement('div');
+      loadingMsg.innerHTML = '<div class="min-h-full flex items-center justify-center"><div class="text-center"><div class="animate-spin text-4xl mb-4">⏳</div><p class="text-white text-lg">กำลังเชื่อมต่อ Firebase...</p></div></div>';
+      document.getElementById('app').appendChild(loadingMsg);
       
-      const sessionId = document.getElementById('sessionIdInput').value.trim().toUpperCase();
-      const playerName = document.getElementById('playerNameInput').value.trim();
-      
-      if (!sessionId) {
-        alert('โปรดใส่ SESSION ID');
-        return;
-      }
-      
-      if (!playerName) {
-        alert('โปรดใส่ชื่อผู้เล่น');
-        return;
-      }
-      
-      // Check if session exists in Firebase
-      database.ref('sessions/' + sessionId).once('value').then((snapshot) => {
-        if (!snapshot.exists()) {
-          alert('SESSION ID ไม่พบ ตรวจสอบและลองอีกครั้ง');
+      ensureFirebaseReady().then(() => {
+        if (!database) {
+          alert('Firebase connection failed. Please reload the page.');
+          loadingMsg.remove();
+          document.getElementById('sessionIdInputScreen').classList.remove('hidden');
           return;
         }
         
-        const session = snapshot.val();
+        loadingMsg.remove();
         
-        // Add player to session
-        session.players.push({ name: playerName, joinTime: Date.now() });
-        database.ref('sessions/' + sessionId).update({ players: session.players }).then(() => {
-          gameState.sessionId = sessionId;
-          gameState.isNetworkGame = true;
-          gameState.players = session.players.map((p, i) => ({
-            id: i,
-            name: p.name,
-            solved: 0,
-            rankS: 0,
-            timeScores: []
-          }));
-          gameState.numPlayers = gameState.players.length;
-          gameState.currentPlayerIndex = gameState.players.length - 1;
+        const sessionId = document.getElementById('sessionIdInput').value.trim().toUpperCase();
+        const playerName = document.getElementById('playerNameInput').value.trim();
+        
+        if (!sessionId) {
+          alert('โปรดใส่ SESSION ID');
+          document.getElementById('sessionIdInputScreen').classList.remove('hidden');
+          return;
+        }
+        
+        if (!playerName) {
+          alert('โปรดใส่ชื่อผู้เล่น');
+          document.getElementById('sessionIdInputScreen').classList.remove('hidden');
+          return;
+        }
+        
+        // Check if session exists in Firebase
+        database.ref('sessions/' + sessionId).once('value').then((snapshot) => {
+          if (!snapshot.exists()) {
+            alert('SESSION ID ไม่พบ ตรวจสอบและลองอีกครั้ง');
+            document.getElementById('sessionIdInputScreen').classList.remove('hidden');
+            return;
+          }
           
-          // Go to map selection
-          document.getElementById('sessionIdInputScreen').classList.add('hidden');
-          document.getElementById('playerSetupScreen').classList.add('hidden');
-          document.getElementById('sessionSetupScreen').classList.add('hidden');
-          document.getElementById('mapSelectScreen').classList.remove('hidden');
-          renderMaps();
-          lucide.createIcons();
+          const session = snapshot.val();
+          
+          // Add player to session
+          session.players.push({ name: playerName, joinTime: Date.now() });
+          database.ref('sessions/' + sessionId).update({ players: session.players }).then(() => {
+            gameState.sessionId = sessionId;
+            gameState.isNetworkGame = true;
+            gameState.players = session.players.map((p, i) => ({
+              id: i,
+              name: p.name,
+              solved: 0,
+              rankS: 0,
+              timeScores: []
+            }));
+            gameState.numPlayers = gameState.players.length;
+            gameState.currentPlayerIndex = gameState.players.length - 1;
+            
+            // Go to map selection
+            document.getElementById('sessionIdInputScreen').classList.add('hidden');
+            document.getElementById('playerSetupScreen').classList.add('hidden');
+            document.getElementById('sessionSetupScreen').classList.add('hidden');
+            document.getElementById('mapSelectScreen').classList.remove('hidden');
+            renderMaps();
+            lucide.createIcons();
+          }).catch(error => {
+            alert('Firebase Error: ' + error.message);
+            console.error('Firebase error:', error);
+            document.getElementById('sessionIdInputScreen').classList.remove('hidden');
+          });
         }).catch(error => {
           alert('Firebase Error: ' + error.message);
+          console.error('Firebase error:', error);
+          document.getElementById('sessionIdInputScreen').classList.remove('hidden');
         });
-      }).catch(error => {
-        alert('Firebase Error: ' + error.message);
       });
     }
 
