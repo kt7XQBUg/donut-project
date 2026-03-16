@@ -360,19 +360,38 @@
       appId: "1:995860841352:web:b62f91fab3621aa4f8f03d"
     };
 
-    // Dynamically load Firebase SDK
+    // Try multiple CDN sources for Firebase SDK
+    const firebaseSDKUrls = [
+      'https://cdn.jsdelivr.net/npm/firebase@10.7.0/compat/firebase.min.js',
+      'https://www.gstatic.com/firebasejs/10.7.0/firebase-compat.min.js',
+      'https://unpkg.com/firebase@10.7.0/compat/firebase.min.js'
+    ];
+
+    let currentUrlIndex = 0;
+
+    // Dynamically load Firebase SDK from multiple sources
     function loadFirebaseSDK() {
-      console.log('Loading Firebase SDK...');
+      if (currentUrlIndex >= firebaseSDKUrls.length) {
+        console.error('✗ All Firebase SDK CDN sources failed to load');
+        setTimeout(loadFirebaseSDK, 5000);
+        return;
+      }
+
+      const url = firebaseSDKUrls[currentUrlIndex];
+      console.log(`Loading Firebase SDK from: ${url}`);
+      
       const script = document.createElement('script');
-      script.src = 'https://www.gstatic.com/firebasejs/10.7.0/firebase-compat.min.js';
+      script.src = url;
       script.onload = function() {
         console.log('✓ Firebase SDK script loaded');
         firebaseSDKLoaded = true;
+        currentUrlIndex = 0;
         initializeFirebase();
       };
       script.onerror = function() {
-        console.error('✗ Firebase SDK failed to load');
-        setTimeout(loadFirebaseSDK, 2000);
+        console.warn(`✗ Firebase SDK failed from ${url}`);
+        currentUrlIndex++;
+        setTimeout(loadFirebaseSDK, 1000);
       };
       document.head.appendChild(script);
     }
